@@ -1,0 +1,17 @@
+# 编译产物
+bin/
+*.exe
+*.pdb
+*.ilk
+
+# 运行时日志
+logs/
+*.log
+
+# 本地硬件探测结果（含序列号，不入库）
+tools/probe-result.txt
+
+# IDE
+.vs/
+*.user
+*.suo

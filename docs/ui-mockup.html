@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SsdTempHud · 界面预览</title>
+<style>
+  :root {
+    --hud-bg: rgba(13, 16, 22, 0.75);
+    --hud-border: rgba(255, 255, 255, 0.12);
+    --text: #e6eaf2;
+    --muted: #8b93a7;
+    --ok: #4ade80;
+    --warn: #fbbf24;
+    --hot: #f87171;
+    --none: #6b7280;
+    --accent: #38bdf8;
+    --track: #1e293b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background:
+      radial-gradient(1200px 600px at 70% -10%, #1b2a3a 0%, transparent 60%),
+      radial-gradient(900px 500px at 10% 110%, #2a1b2e 0%, transparent 55%),
+      #070a0f;
+    color: var(--text);
+    font-family: "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* 模拟游戏画面背景，便于观察横条在真实场景中的对比度 */
+  .game {
+    position: relative;
+    height: 100vh;
+    min-height: 640px;
+    overflow: hidden;
+  }
+  .game::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(115deg, transparent 0 45%, rgba(255,255,255,0.035) 45% 46%, transparent 46% 100%),
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.018) 0 2px, transparent 2px 4px);
+    pointer-events: none;
+  }
+
+  /* 顶部悬浮横条 */
+  .hud {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    height: 34px;
+    padding: 0 16px;
+    background: var(--hud-bg);
+    border: 1px solid var(--hud-border);
+    border-top: 0;
+    border-radius: 0 0 10px 10px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+    font-size: 12px;
+    white-space: nowrap;
+    user-select: none;
+  }
+  .disk {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--ok);
+    box-shadow: 0 0 6px rgba(74, 222, 128, 0.55);
+  }
+  .dot.stale { background: var(--warn); box-shadow: none; }
+  .dot.dead  { background: var(--none); box-shadow: none; }
+  .letter {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    color: var(--text);
+  }
+  .temp {
+    font-size: 13px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--ok);
+  }
+  .temp.warn { color: var(--warn); }
+  .temp.hot  { color: var(--hot); }
+  .temp.na   { color: var(--none); }
+  .bar {
+    position: relative;
+    width: 44px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--track);
+    overflow: hidden;
+  }
+  .bar > i {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 0;
+    border-radius: 2px;
+    background: var(--accent);
+    transition: width 0.25s linear;
+  }
+  .pct {
+    width: 32px;
+    text-align: right;
+    font-size: 11px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .sep {
+    width: 1px;
+    height: 14px;
+    background: rgba(255, 255, 255, 0.10);
+  }
+
+  /* 说明区 */
+  .notes {
+    position: absolute;
+    left: 50%;
+    top: 90px;
+    transform: translateX(-50%);
+    width: min(760px, 92vw);
+    display: grid;
+    gap: 26px;
+  }
+  .card {
+    background: rgba(10, 13, 19, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 18px 20px;
+  }
+  .card h2 {
+    margin: 0 0 4px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+  .card p {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--muted);
+  }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    display: inline-block;
+  }
+  .states {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 14px;
+  }
+  .state-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .state-row .hud {
+    position: static;
+    transform: none;
+    box-shadow: none;
+    height: 30px;
+  }
+  .tag {
+    width: 74px;
+    flex: 0 0 74px;
+    font-size: 11px;
+    color: #6f7889;
+  }
+  .hint {
+    position: absolute;
+    bottom: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    color: #596274;
+    letter-spacing: 0.3px;
+  }
+</style>
+</head>
+<body>
+<div class="game">
+  <!-- 真实位置：屏幕顶部居中 -->
+  <div class="hud" role="img" aria-label="磁盘温度悬浮条预览">
+    <div class="disk">
+      <span class="dot"></span>
+      <span class="letter">C:</span>
+      <span class="temp">51°C</span>
+      <span class="bar"><i style="width:12%"></i></span>
+      <span class="pct">12%</span>
+    </div>
+    <span class="sep"></span>
+    <div class="disk">
+      <span class="dot"></span>
+      <span class="letter">E:</span>
+      <span class="temp">58°C</span>
+      <span class="bar"><i style="width:3%"></i></span>
+      <span class="pct">3%</span>
+    </div>
+  </div>
+
+  <div class="notes">
+    <div class="card">
+      <h2>设计说明</h2>
+      <p>
+        横条固定在屏幕顶部居中，高 34 px，深色半透明，不占任务栏、不抢焦点。
+        默认开启鼠标穿透，游戏中的点击会直接落到游戏上；按
+        <b style="color:#c9d2e3">Ctrl+Alt+M</b> 可临时关闭穿透进行交互，
+        <b style="color:#c9d2e3">Ctrl+Alt+H</b> 隐藏/显示。
+      </p>
+      <div class="legend">
+        <span><i class="swatch" style="background:#4ade80"></i>正常 &lt; 65°C</span>
+        <span><i class="swatch" style="background:#fbbf24"></i>偏高 65–74°C</span>
+        <span><i class="swatch" style="background:#f87171"></i>危险 ≥ 75°C</span>
+        <span><i class="swatch" style="background:#38bdf8"></i>磁盘活动率</span>
+        <span><i class="swatch" style="background:#6b7280"></i>无数据</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>状态预览</h2>
+      <div class="states">
+        <div class="state-row">
+          <span class="tag">正常</span>
+          <div class="hud">
+            <div class="disk">
+              <span class="dot"></span><span class="letter">C:</span>
+              <span class="temp">51°C</span>
+              <span class="bar"><i style="width:12%"></i></span><span class="pct">12%</span>
+            </div>
+            <span class="sep"></span>
+            <div class="disk">
+              <span class="dot"></span><span class="letter">E:</span>
+              <span class="temp">58°C</span>
+              <span class="bar"><i style="width:3%"></i></span><span class="pct">3%</span>
+            </div>
+          </div>
+        </div>
+        <div class="state-row">
+          <span class="tag">偏高 / 高负载</span>
+          <div class="hud">
+            <div class="disk">
+              <span class="dot"></span><span class="letter">C:</span>
+              <span class="temp warn">68°C</span>
+              <span class="bar"><i style="width:76%"></i></span><span class="pct">76%</span>
+            </div>
+            <span class="sep"></span>
+            <div class="disk">
+              <span class="dot"></span><span class="letter">E:</span>
+              <span class="temp">54°C</span>
+              <span class="bar"><i style="width:18%"></i></span><span class="pct">18%</span>
+            </div>
+          </div>
+        </div>
+        <div class="state-row">
+          <span class="tag">危险 / 读取失败</span>
+          <div class="hud">
+            <div class="disk">
+              <span class="dot"></span><span class="letter">C:</span>
+              <span class="temp hot">78°C</span>
+              <span class="bar"><i style="width:94%"></i></span><span class="pct">94%</span>
+            </div>
+            <span class="sep"></span>
+            <div class="disk">
+              <span class="dot dead"></span><span class="letter">E:</span>
+              <span class="temp na">--</span>
+              <span class="bar"><i style="width:0%"></i></span><span class="pct">--</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hint">此页面仅用于确认视觉方向与交互约定，最终效果以 WPF 程序为准</div>
+</div>
+</body>
+</html>
